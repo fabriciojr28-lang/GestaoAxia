@@ -1,9 +1,10 @@
-# A cada push na main: roda os testes e publica a imagem em ghcr.io/<dono>/gestaoaxia
+# Push na main -> testes + imagem :latest. Tag vX.Y.Z -> testes + imagem :vX.Y.Z (e :latest).
 name: Testes e imagem Docker
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -35,6 +36,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Nome da imagem em minúsculas
         run: echo "IMAGEM=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/gestaoaxia" >> "$GITHUB_ENV"
+      - name: Tag de versão (quando o push é de uma tag v*)
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "TAG_VERSAO=${{ env.IMAGEM }}:${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          fi
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -42,3 +48,4 @@ jobs:
           tags: |
             ${{ env.IMAGEM }}:latest
             ${{ env.IMAGEM }}:${{ github.sha }}
+            ${{ env.TAG_VERSAO }}

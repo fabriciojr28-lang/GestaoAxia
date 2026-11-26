@@ -1,10 +1,11 @@
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
@@ -62,6 +63,13 @@ for r in (auth.router, cadastros.router, movimentacoes.router, fechamento.router
 @app.get("/api/saude", include_in_schema=False)
 def saude():
     return {"status": "ok"}
+
+
+@app.get("/config.js", include_in_schema=False)
+def config_js():
+    """Configuração das telas vinda da stack (API_URL), lida pelo navegador antes do React."""
+    conteudo = f"window.GESTAOAXIA_API = {json.dumps(cfg.api_url)};\n"
+    return Response(conteudo, media_type="application/javascript", headers={"Cache-Control": "no-store"})
 
 
 # Em produção o mesmo container serve o React já compilado (FRONTEND_DIST).

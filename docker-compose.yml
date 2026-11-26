@@ -1,14 +1,19 @@
-# Stack do GestaoAxia para o Portainer (Stacks > Add stack > Web editor).
+# Stack do GestaoAxia para o Portainer (Docker Swarm + Traefik).
+# Portainer > Stacks > Add stack > Web editor.
 #
 # TODAS as configurações ficam aqui no bloco "environment" — nada no código.
 # Este arquivo vai para o GitHub, por isso tem valores de EXEMPLO.
 # A versão com os valores reais fica em stack.portainer.yml (fora do git).
+#
+# Domínios (crie os registros DNS tipo A apontando para a VPS):
+#   app.gestaoaxia.com.br  -> telas do sistema
+#   api.gestaoaxia.com.br  -> API (o Traefik acrescenta o prefixo /api)
+
+version: "3.8"
 
 services:
   gestaoaxia:
     image: ghcr.io/fabriciojr28-lang/gestaoaxia:latest
-    container_name: gestaoaxia
-    restart: unless-stopped
     environment:
       # chave que assina os logins — 32+ caracteres aleatórios, nunca reutilize
       SECRET_KEY: "TROQUE-por-uma-chave-aleatoria-com-mais-de-32-caracteres"
@@ -20,15 +25,53 @@ services:
       ADMIN_EMAIL: "admin@exemplo.com"
       ADMIN_SENHA: "TROQUE-esta-senha"
       ADMIN_NOME: "Administrador"
-      # vazio = API e telas no mesmo endereço (padrão)
-      CORS_ORIGINS: ""
+      # endereço público da API que as telas vão chamar
+      API_URL: "https://api.gestaoaxia.com.br"
+      # endereço das telas, liberado para chamar a API (CORS)
+      CORS_ORIGINS: "https://app.gestaoaxia.com.br"
       # onde estão as telas compiladas dentro da imagem
       FRONTEND_DIST: "/app/frontend_dist"
       TZ: "America/Fortaleza"
     volumes:
       - gestaoaxia_dados:/dados
-    ports:
-      - "8000:8000"
+    networks:
+      - GestaoAxia
+    deploy:
+      mode: replicated
+      replicas: 1 # SQLite: sempre 1 réplica
+      placement:
+        constraints:
+          - node.role == manager # o volume do banco fica sempre no mesmo nó
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        order: stop-first # nunca dois containers escrevendo no mesmo SQLite
+      resources:
+        limits:
+          memory: 512M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=GestaoAxia
+        - traefik.http.services.gestaoaxia.loadbalancer.server.port=8000
+        # telas: app.gestaoaxia.com.br
+        - traefik.http.routers.gestaoaxia-app.rule=Host(`app.gestaoaxia.com.br`)
+        - traefik.http.routers.gestaoaxia-app.entrypoints=websecure
+        - traefik.http.routers.gestaoaxia-app.tls=true
+        - traefik.http.routers.gestaoaxia-app.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.gestaoaxia-app.service=gestaoaxia
+        # API: api.gestaoaxia.com.br/colaboradores -> /api/colaboradores
+        - traefik.http.routers.gestaoaxia-api.rule=Host(`api.gestaoaxia.com.br`)
+        - traefik.http.routers.gestaoaxia-api.entrypoints=websecure
+        - traefik.http.routers.gestaoaxia-api.tls=true
+        - traefik.http.routers.gestaoaxia-api.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.gestaoaxia-api.service=gestaoaxia
+        - traefik.http.routers.gestaoaxia-api.middlewares=gestaoaxia-api-prefixo
+        - traefik.http.middlewares.gestaoaxia-api-prefixo.addprefix.prefix=/api
 
 volumes:
   gestaoaxia_dados:
+
+networks:
+  GestaoAxia:
+    external: true

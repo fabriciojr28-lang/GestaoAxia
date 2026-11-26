@@ -19,6 +19,7 @@ OBRIGATORIAS = [
     "ADMIN_NOME",
     "CORS_ORIGINS",
     "FRONTEND_DIST",
+    "API_URL",
 ]
 
 
@@ -45,6 +46,7 @@ class Config:
     admin_nome: str
     cors_origins: list[str]
     frontend_dist: str  # pasta do build do React; vazio = não servir frontend (dev)
+    api_url: str  # endereço público da API usado pelas telas; vazio = mesmo endereço (/api)
 
 
 @lru_cache
@@ -67,4 +69,5 @@ def get_config() -> Config:
         admin_nome=os.environ["ADMIN_NOME"],
         cors_origins=[o.strip() for o in os.environ["CORS_ORIGINS"].split(",") if o.strip()],
         frontend_dist=os.environ["FRONTEND_DIST"].strip(),
+        api_url=os.environ["API_URL"].strip().rstrip("/"),
     )

@@ -63,26 +63,43 @@ python -m app.importar --pasta .. --substituir # apaga os dados (mantém usuári
 O importador padroniza nomes (`RAFAEL BITU` → `RAFAEL COSTA LEANDRO BITU`, `BOM NOME` → `SE BOM NOME`)
 e lista no final tudo que precisa de conferência (datas invertidas, nomes abreviados, linhas duplicadas).
 
-## Produção: VPS com Portainer
+## Produção: VPS com Portainer (Docker Swarm + Traefik)
 
 Toda a configuração fica no bloco `environment` da stack — nada no código.
 
-1. **Imagem**: a cada push na `main`, o GitHub Actions roda os testes e publica
-   `ghcr.io/fabriciojr28-lang/gestaoaxia:latest`. Se o pacote for privado, cadastre o registro
-   `ghcr.io` no Portainer (*Registries*) com um token do GitHub com permissão `read:packages`.
-2. **Stack**: Portainer → *Stacks* → *Add stack* → *Web editor* e cole o conteúdo de
+| Endereço | O que responde |
+|---|---|
+| https://app.gestaoaxia.com.br | Telas do sistema |
+| https://api.gestaoaxia.com.br | API — o Traefik acrescenta `/api` (ex.: `/colaboradores` → `/api/colaboradores`) |
+
+As telas descobrem o endereço da API lendo `/config.js`, que o backend gera a partir da variável
+`API_URL` da stack. Por isso o mesmo build serve para qualquer domínio.
+
+1. **DNS**: registros tipo A de `app.gestaoaxia.com.br` e `api.gestaoaxia.com.br` para o IP da VPS
+   (o Let's Encrypt do Traefik só emite o certificado depois que o DNS responde).
+2. **Rede**: a stack usa a rede overlay externa `GestaoAxia`, a mesma do Traefik
+   (`--providers.swarm.network=GestaoAxia`).
+3. **Imagem**: a cada push na `main` o GitHub Actions roda os testes e publica
+   `ghcr.io/fabriciojr28-lang/gestaoaxia:latest`; cada tag `vX.Y.Z` publica também `:vX.Y.Z`.
+   Se o pacote for privado, cadastre `ghcr.io` no Portainer (*Registries*) com um token do GitHub
+   com permissão `read:packages`.
+4. **Stack**: Portainer → *Stacks* → *Add stack* → *Web editor* e cole o conteúdo de
    `stack.portainer.yml` (arquivo local com os valores reais, fora do git; o `docker-compose.yml`
    do repositório é o mesmo modelo com valores de exemplo).
-3. **HTTPS**: publique a porta 8000 atrás do proxy da VPS (Nginx Proxy Manager, Traefik, Caddy…)
-   com certificado. O login não deve trafegar sem HTTPS.
-4. **Dados iniciais** — escolha um:
+5. **Atualizar**: em *Services* → `gestaoaxia_gestaoaxia` → *Update the service* marcando
+   *Re-pull image*. O serviço para antes de subir o novo (`order: stop-first`) porque o SQLite
+   não pode ter dois processos gravando.
+
+No Swarm o nome do container muda a cada deploy. Para os comandos abaixo, pegue o nome atual com
+`docker ps --filter name=gestaoaxia --format '{{.Names}}'` e use no lugar de `gestaoaxia`.
+6. **Dados iniciais** — escolha um:
    - enviar o banco já importado (com o sistema local desligado):
      `docker cp dados/gestaoaxia.db gestaoaxia:/dados/`, depois
      `docker exec -u 0 gestaoaxia chown 1000:1000 /dados/gestaoaxia.db` e reiniciar o container; ou
    - importar lá: `docker cp "PLANILHA.xlsx" gestaoaxia:/dados/` (as três) e
      `docker exec gestaoaxia python -m app.importar --pasta /dados`
      (para reimportar por cima, acrescente `--substituir`; os usuários são mantidos).
-5. **Backup**: o banco inteiro é o arquivo `/dados/gestaoaxia.db` do volume `gestaoaxia_dados`.
+7. **Backup**: o banco inteiro é o arquivo `/dados/gestaoaxia.db` do volume `gestaoaxia_dados`.
 
 ### Variáveis da stack
 
@@ -92,6 +109,7 @@ Toda a configuração fica no bloco `environment` da stack — nada no código.
 | `TOKEN_EXPIRA_MINUTOS` | Quanto tempo o login dura |
 | `DATABASE_PATH` | Caminho do SQLite (dentro do volume `/dados`) |
 | `ADMIN_EMAIL` / `ADMIN_SENHA` / `ADMIN_NOME` | Administrador criado no primeiro start, se o e-mail ainda não existir. Mudar depois **não** altera a senha de um admin já criado — use "Trocar senha" na tela. |
-| `CORS_ORIGINS` | Vazio em produção (API e telas no mesmo endereço) |
+| `API_URL` | Endereço público da API que as telas chamam (`https://api.gestaoaxia.com.br`). Vazio = mesmo endereço das telas |
+| `CORS_ORIGINS` | Endereço das telas autorizado a chamar a API (`https://app.gestaoaxia.com.br`) |
 | `FRONTEND_DIST` | Pasta das telas dentro da imagem (`/app/frontend_dist`) |
 | `TZ` | Fuso horário do container |

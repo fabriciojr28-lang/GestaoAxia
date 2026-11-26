@@ -12,8 +12,12 @@ export function quandoSessaoExpirar(fn) {
   aoExpirar = fn;
 }
 
+// Endereço da API vem da stack (variável API_URL) via /config.js.
+// Ex.: "https://api.gestaoaxia.com.br" — vazio = mesmo endereço das telas (/api).
+const BASE_API = (window.GESTAOAXIA_API || "").replace(/\/$/, "");
+
 function montarUrl(caminho, params) {
-  const url = new URL(`/api${caminho}`, window.location.origin);
+  const url = new URL(BASE_API ? `${BASE_API}${caminho}` : `/api${caminho}`, window.location.origin);
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== "" && v !== false) url.searchParams.set(k, v);
   });

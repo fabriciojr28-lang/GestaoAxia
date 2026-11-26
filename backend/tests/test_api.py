@@ -130,3 +130,10 @@ def test_leitura_nao_altera(client, admin):
     leitor = entrar(client, "ver@teste.com", "senha-leitura-1")
     assert client.get("/api/painel", headers=leitor).status_code == 200
     assert client.post("/api/contratadas", json={"nome": "X Ltda"}, headers=leitor).status_code == 403
+
+
+def test_config_js_publica_endereco_da_api(client):
+    r = client.get("/config.js")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/javascript")
+    assert r.text.strip() == 'window.GESTAOAXIA_API = "";'

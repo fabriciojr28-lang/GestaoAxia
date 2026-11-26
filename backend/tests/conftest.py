@@ -14,6 +14,7 @@ os.environ.update({
     "ADMIN_NOME": "Admin Teste",
     "CORS_ORIGINS": "",
     "FRONTEND_DIST": "",
+    "API_URL": "",
 })
 
 from fastapi.testclient import TestClient  # noqa: E402
