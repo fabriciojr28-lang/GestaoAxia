@@ -1,0 +1,28 @@
+# Dados reais (contêm CPF, telefones e e-mails) — nunca versionar
+*.xlsx
+*.xls
+*.csv
+dados/
+
+# Banco e arquivos gerados
+*.sqlite3
+db/
+staticfiles/
+media/
+
+# Configuração local / segredos
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# Stack real com senhas (copiar para o Portainer)
+stack.portainer.yml

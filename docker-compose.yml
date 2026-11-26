@@ -1,0 +1,34 @@
+# Stack do GestaoAxia para o Portainer (Stacks > Add stack > Web editor).
+#
+# TODAS as configurações ficam aqui no bloco "environment" — nada no código.
+# Este arquivo vai para o GitHub, por isso tem valores de EXEMPLO.
+# A versão com os valores reais fica em stack.portainer.yml (fora do git).
+
+services:
+  gestaoaxia:
+    image: ghcr.io/fabriciojr28-lang/gestaoaxia:latest
+    container_name: gestaoaxia
+    restart: unless-stopped
+    environment:
+      # chave que assina os logins — 32+ caracteres aleatórios, nunca reutilize
+      SECRET_KEY: "TROQUE-por-uma-chave-aleatoria-com-mais-de-32-caracteres"
+      # duração do login em minutos (600 = 10h)
+      TOKEN_EXPIRA_MINUTOS: "600"
+      # banco SQLite dentro do volume persistente
+      DATABASE_PATH: "/dados/gestaoaxia.db"
+      # administrador criado no primeiro start (se o e-mail ainda não existir)
+      ADMIN_EMAIL: "admin@exemplo.com"
+      ADMIN_SENHA: "TROQUE-esta-senha"
+      ADMIN_NOME: "Administrador"
+      # vazio = API e telas no mesmo endereço (padrão)
+      CORS_ORIGINS: ""
+      # onde estão as telas compiladas dentro da imagem
+      FRONTEND_DIST: "/app/frontend_dist"
+      TZ: "America/Fortaleza"
+    volumes:
+      - gestaoaxia_dados:/dados
+    ports:
+      - "8000:8000"
+
+volumes:
+  gestaoaxia_dados:

@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+frontend/dist
+dados
+db
+*.xlsx
+*.xls
+*.csv
+**/.env
+stack.portainer.yml
+backend/tests
